@@ -1,0 +1,16 @@
+[submodule "projects/ampere-pmu-profiler"]
+	path = projects/ampere-pmu-profiler
+	url = https://github.com/AmpereComputing/ampere-pmu-profiler.git
+	branch = main
+[submodule "projects/ampere-porting-advisor"]
+	path = projects/ampere-porting-advisor
+	url = https://github.com/AmpereComputing/ampere-porting-advisor.git
+	branch = main
+[submodule "projects/ampere-system-profiler"]
+	path = projects/ampere-system-profiler
+	url = https://github.com/AmpereComputing/ampere-system-profiler.git
+	branch = main
+[submodule "projects/ampere-perfkit-benchmarker"]
+	path = projects/ampere-perfkit-benchmarker
+	url = https://github.com/AmpereComputing/ampere-perfkit-benchmarker.git
+	branch = main
