@@ -30,11 +30,28 @@ jobs:
             echo "No submodule changes detected."
           fi
 
-      - name: Commit and push updates
+      - name: Configure git user (for create-pull-request commits)
         if: env.changes == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Stage submodule changes
+        if: env.changes == 'true'
+        run: |
           git add projects/*
-          git commit -m "chore(submodules): update [skip ci]"
-          git push origin HEAD:main
+
+      - name: Create or update PR with submodule bumps (requests reviewer)
+        if: env.changes == 'true'
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(submodules): update to latest main (automated)'
+          title: 'chore(submodules): update to latest main (automated)'
+          body: |
+            This PR updates the repository's submodule references to the latest tips of their configured branches (e.g., main).
+            Automated update created by GitHub Actions.
+          branch: automated/update-submodules
+          labels: automated
+          delete-branch: true
+          reviewers: 'zmeyers-ampere'
