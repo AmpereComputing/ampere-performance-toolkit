@@ -12,6 +12,9 @@ permissions:
 jobs:
   update-submodules:
     runs-on: self-hosted
+    env:
+      GH_PROMPT_DISABLED: 1
+      GIT_TERMINAL_PROMPT: 0
 
     steps:
       - name: Checkout repository (with submodules)
@@ -63,11 +66,22 @@ jobs:
             This PR updates the repository's submodule references to the latest tips of their configured branches (e.g., main).
             Automated update created by GitHub Actions.
         run: |
-          gh pr view "$BRANCH_NAME" --json number --jq .number >/dev/null 2>&1 \
-            || gh pr create \
-              --base "$GITHUB_REF_NAME" \
-              --head "$BRANCH_NAME" \
-              --title "$PR_TITLE" \
-              --body "$PR_BODY" \
-              --label automated \
-              --reviewer zmeyers-ampere
+          pr_number="$(gh pr list \
+            --head "$BRANCH_NAME" \
+            --base "$GITHUB_REF_NAME" \
+            --state open \
+            --json number \
+            --jq '.[0].number // ""')"
+
+          if [ -n "$pr_number" ]; then
+            echo "Open PR #$pr_number already exists for $BRANCH_NAME into $GITHUB_REF_NAME."
+            exit 0
+          fi
+
+          gh pr create \
+            --base "$GITHUB_REF_NAME" \
+            --head "$BRANCH_NAME" \
+            --title "$PR_TITLE" \
+            --body "$PR_BODY" \
+            --label automated \
+            --reviewer zmeyers-ampere
