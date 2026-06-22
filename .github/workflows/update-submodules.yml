@@ -4,15 +4,21 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * 1' # run every Monday at 6AM UTC
-  push:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   update-submodules:
     runs-on: self-hosted
+    env:
+      GH_PROMPT_DISABLED: 1
+      GIT_TERMINAL_PROMPT: 0
 
     steps:
       - name: Checkout repository (with submodules)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -30,7 +36,7 @@ jobs:
             echo "No submodule changes detected."
           fi
 
-      - name: Configure git user (for create-pull-request commits)
+      - name: Configure git user
         if: env.changes == 'true'
         run: |
           git config user.name "github-actions[bot]"
@@ -41,17 +47,41 @@ jobs:
         run: |
           git add projects/*
 
-      - name: Create or update PR with submodule bumps (requests reviewer)
+      - name: Commit and push submodule changes
         if: env.changes == 'true'
-        uses: peter-evans/create-pull-request@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore(submodules): update to latest main (automated)'
-          title: 'chore(submodules): update to latest main (automated)'
-          body: |
+        env:
+          BRANCH_NAME: automated/update-submodules
+        run: |
+          git checkout -B "$BRANCH_NAME"
+          git commit -m "chore(submodules): update to latest main (automated)"
+          git push --force-with-lease origin "$BRANCH_NAME"
+
+      - name: Create PR with submodule bumps (requests reviewer)
+        if: env.changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: automated/update-submodules
+          PR_TITLE: 'chore(submodules): update to latest main (automated)'
+          PR_BODY: |
             This PR updates the repository's submodule references to the latest tips of their configured branches (e.g., main).
             Automated update created by GitHub Actions.
-          branch: automated/update-submodules
-          labels: automated
-          delete-branch: true
-          reviewers: 'zmeyers-ampere'
+        run: |
+          pr_number="$(gh pr list \
+            --head "$BRANCH_NAME" \
+            --base "$GITHUB_REF_NAME" \
+            --state open \
+            --json number \
+            --jq '.[0].number // ""')"
+
+          if [ -n "$pr_number" ]; then
+            echo "Open PR #$pr_number already exists for $BRANCH_NAME into $GITHUB_REF_NAME."
+            exit 0
+          fi
+
+          gh pr create \
+            --base "$GITHUB_REF_NAME" \
+            --head "$BRANCH_NAME" \
+            --title "$PR_TITLE" \
+            --body "$PR_BODY" \
+            --label automated \
+            --reviewer zmeyers-ampere
