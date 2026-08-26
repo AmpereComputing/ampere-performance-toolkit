@@ -84,4 +84,4 @@ jobs:
             --title "$PR_TITLE" \
             --body "$PR_BODY" \
             --label automated \
-            --reviewer zmeyers-ampere
+            --reviewer TitoReinhart-Ampere
